@@ -6,6 +6,24 @@
 
 <div class="plans-container">
     <div class="plans-header">
+        <!-- ✅ NUEVO: Botón de navegación que detecta el rol del usuario -->
+        <div class="navigation-bar">
+            @if (User.IsInRole("artist"))
+            {
+                <a href="@Url.Action("Home", "Artists")" class="btn-home">
+                    <i class="fas fa-home me-2"></i>
+                    Home Artista
+                </a>
+            }
+            else if (User.IsInRole("client"))
+            {
+                <a href="@Url.Action("Home", "Clients")" class="btn-home">
+                    <i class="fas fa-home me-2"></i>
+                    Home Cliente
+                </a>
+            }
+        </div>
+        
         <h1 class="plans-title">
             <i class="fas fa-crown me-3"></i>
             Planes de Suscripción
@@ -43,11 +61,19 @@
     <!-- Plan Actual -->
     @if (Model.CurrentPlan != null)
     {
+        <!-- ✅ MEJORAR: Información del plan actual -->
         <div class="current-plan-card">
             <div class="current-plan-header">
                 <h3>
                     <i class="fas fa-crown me-2"></i>
                     Tu Plan Actual
+                    @if (Model.CurrentUserPlan?.IsCancelled == true)
+                    {
+                        <span class="cancelled-badge">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Cancelado
+                        </span>
+                    }
                 </h3>
             </div>
             <div class="current-plan-body">
@@ -58,15 +84,39 @@
                         <span class="price-amount">$@Model.CurrentPlan.Price.ToString("F2")</span>
                         <span class="price-period">/mes</span>
                     </div>
+                    
+                    @if (Model.CurrentUserPlan?.IsCancelled == true)
+                    {
+                        <div class="cancellation-info">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Plan cancelado:</strong> Mantienes acceso premium hasta el 
+                                <strong>@Model.CurrentUserPlan.EndDate.ToString("dd/MM/yyyy")</strong>
+                            </div>
+                            <p class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                Tu plan no se renovará automáticamente.
+                            </p>
+                        </div>
+                    }
                 </div>
                 <div class="current-plan-actions">
-                    <form asp-action="Cancel" method="post" class="d-inline">
-                        <button type="submit" class="btn btn-cancel" 
-                                onclick="return confirm('¿Estás seguro de que deseas cancelar tu suscripción?');">
+                    @if (Model.CurrentUserPlan?.IsCancelled != true)
+                    {
+                        <!-- Mostrar botón de cancelar solo si no está cancelado -->
+                        <button type="button" class="btn btn-cancel" onclick="showCancelModal('@Model.CurrentPlan.PlanName')">
                             <i class="fas fa-times me-1"></i>
                             Cancelar Suscripción
                         </button>
-                    </form>
+                    }
+                    else
+                    {
+                        <!-- Mostrar botón para reactivar si está cancelado -->
+                        <button type="button" class="btn btn-reactivate" onclick="reactivateSubscription()">
+                            <i class="fas fa-undo me-1"></i>
+                            Reactivar Suscripción
+                        </button>
+                    }
                 </div>
             </div>
         </div>
@@ -79,8 +129,53 @@
         </div>
     }
 
+    <!-- ✅ MEJORAR: Sección de Gestionar Invitaciones MUY VISIBLE -->
+    @if (Model.CurrentPlan != null && Model.CurrentPlan.AccountLimit > 1)
+    {
+        <div class="invitation-spotlight">
+            <div class="invitation-glow"></div>
+            <div class="invitation-content">
+                <div class="invitation-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="invitation-text">
+                    <h2 class="invitation-title">
+                        <i class="fas fa-envelope me-2"></i>
+                        Gestionar Invitaciones
+                    </h2>
+                    <p class="invitation-description">
+                        Tu plan permite hasta <strong>@Model.CurrentPlan.AccountLimit cuentas</strong>. 
+                        Invita a familiares o amigos.
+                    </p>
+                    <div class="invitation-features">
+                        <div class="feature">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Invitaciones ilimitadas</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Gestión completa</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Fácil configuración</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="invitation-cta">
+                    <a href="@Url.Action("ManageInvitations")" class="btn-manage-invitations-spotlight">
+                        <i class="fas fa-paper-plane me-2"></i>
+                        <span class="btn-text">Gestionar Invitaciones</span>
+                        <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                    <p class="cta-subtitle">¡Comparte tu plan premium!</p>
+                </div>
+            </div>
+        </div>
+    }
+
     <!-- Planes Disponibles -->
-    <div class="plans-grid">
+    <div class="planes-grid">
         @foreach (var plan in Model.PremiumPlans)
         {
             <div class="plan-card @(Model.CurrentPlan?.Id == plan.Id ? "active-plan" : "")">
@@ -145,8 +240,52 @@
     </div>
 </div>
 
+<!-- ✅ NUEVO: Modal personalizado para cancelar suscripción -->
+<div id="cancelModal" class="cancel-modal-overlay d-none">
+    <div class="cancel-modal-container">
+        <div class="cancel-modal-header">
+            <div class="cancel-modal-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="cancel-modal-title">Cancelar Suscripción</h3>
+        </div>
+        
+        <div class="cancel-modal-body">
+            <p class="cancel-modal-message">
+                ¿Estás seguro de que deseas cancelar tu suscripción al plan <strong id="planToCancel"></strong>?
+            </p>
+            
+            <div class="cancel-modal-warning">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <p class="warning-title">Ten en cuenta:</p>
+                    <ul class="warning-list">
+                        <li>Perderás acceso a las funciones premium al finalizar el período actual</li>
+                        <li>Tu suscripción se desactivará inmediatamente</li>
+                        <li>Podrás reactivar tu plan en cualquier momento</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="cancel-modal-actions">
+            <button type="button" class="btn-modal btn-keep" onclick="hideCancelModal()">
+                <i class="fas fa-heart me-2"></i>
+                Mantener Suscripción
+            </button>
+            <button type="button" class="btn-modal btn-confirm-cancel" onclick="confirmCancelSubscription()">
+                <i class="fas fa-times me-2"></i>
+                Cancelar Plan
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Formulario oculto para cancelar -->
+<form id="cancelForm" asp-action="Cancel" method="post" style="display: none;"></form>
+
 <style>
-    /* Resetear estilos del layout principal */
+    /* ✅ CORREGIR: CSS COMPLETO Y CORRECTO */
     .container {
         max-width: none !important;
         padding: 0 !important;
@@ -165,11 +304,45 @@
         margin: 0 auto;
         padding: 2rem;
         min-height: 100vh;
+        position: relative;
     }
 
     .plans-header {
         text-align: center;
         margin-bottom: 3rem;
+        padding-top: 3rem;
+        position: relative;
+    }
+
+    .navigation-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        margin-bottom: 1rem;
+        z-index: 10;
+    }
+
+    .btn-home {
+        background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+        color: #fff !important;
+        border: 1px solid #333;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        font-size: 0.9rem;
+    }
+
+    .btn-home:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        color: #000 !important;
+        border-color: #1db954;
+        background: linear-gradient(135deg, #1db954, #1ed760);
     }
 
     .plans-title {
@@ -194,6 +367,9 @@
         border-radius: 8px;
         border: none;
         margin-bottom: 2rem;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
     }
 
     .alert-success {
@@ -282,7 +458,7 @@
         font-size: 1rem;
     }
 
-    .btn-cancel {
+    .btn-cancel, .btn-reactivate {
         background: transparent;
         border: 2px solid #dc3545;
         color: #dc3545;
@@ -294,17 +470,28 @@
         text-decoration: none;
     }
 
-    .btn-cancel:hover {
+    .btn-cancel:hover, .btn-reactivate:hover {
         background: #dc3545;
         color: #fff;
         transform: translateY(-2px);
     }
 
-    /* Grid de Planes */
-    .plans-grid {
+    .btn-reactivate {
+        border-color: #1db954;
+        color: #1db954;
+    }
+
+    .btn-reactivate:hover {
+        background: #1db954;
+        color: #000;
+    }
+
+    /* ✅ CORREGIR: Grid de Planes - TARJETAS */
+    .planes-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
         gap: 2rem;
+        margin-bottom: 3rem;
     }
 
     .plan-card {
@@ -314,6 +501,9 @@
         overflow: hidden;
         transition: all 0.3s ease;
         position: relative;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
     }
 
     .plan-card:hover {
@@ -338,6 +528,10 @@
         font-weight: 700;
         color: #fff;
         margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
     }
 
     .plan-description {
@@ -369,10 +563,16 @@
         border-bottom: 1px solid #333;
     }
 
+    .feature-item i {
+        margin-right: 0.75rem;
+        font-size: 1rem;
+    }
+
     .plan-footer {
         padding: 2rem;
         text-align: center;
         border-top: 1px solid #333;
+        margin-top: auto;
     }
 
     .plan-price {
@@ -433,6 +633,384 @@
         width: 100%;
     }
 
+    /* ✅ NUEVO: Sección de Invitaciones Spotlight - MUY VISIBLE */
+    .invitation-spotlight {
+        position: relative;
+        background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+        border: 3px solid transparent;
+        border-radius: 20px;
+        margin: 3rem 0;
+        overflow: hidden;
+        box-shadow: 
+            0 0 30px rgba(29, 185, 84, 0.3),
+            0 0 60px rgba(29, 185, 84, 0.2),
+            0 10px 40px rgba(0, 0, 0, 0.5);
+        animation: pulse-border 3s infinite;
+    }
+
+    .invitation-spotlight::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, #1db954, #1ed760, #22c55e, #16a34a);
+        background-size: 300% 300%;
+        animation: gradient-shift 4s ease infinite;
+        z-index: -1;
+        border-radius: 17px;
+    }
+
+    @@keyframes pulse-border {
+        0%, 100% {
+            box-shadow: 
+                0 0 30px rgba(29, 185, 84, 0.3),
+                0 0 60px rgba(29, 185, 84, 0.2),
+                0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        50% {
+            box-shadow: 
+                0 0 50px rgba(29, 185, 84, 0.5),
+                0 0 100px rgba(29, 185, 84, 0.3),
+                0 15px 50px rgba(0, 0, 0, 0.6);
+        }
+    }
+
+    @@keyframes gradient-shift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .invitation-glow {
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(29, 185, 84, 0.1) 0%, transparent 70%);
+        animation: rotate-glow 6s linear infinite;
+        pointer-events: none;
+    }
+
+    @@keyframes rotate-glow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .invitation-content {
+        position: relative;
+        padding: 3rem;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 2rem;
+        align-items: center;
+        background: linear-gradient(135deg, rgba(26, 26, 26, 0.9), rgba(42, 42, 42, 0.9));
+        border-radius: 17px;
+        margin: 3px;
+    }
+
+    .invitation-icon {
+        font-size: 5rem;
+        color: #1db954;
+        animation: bounce-icon 2s infinite;
+        text-align: center;
+        width: 100px;
+    }
+
+    @@keyframes bounce-icon {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-10px);
+        }
+        60% {
+            transform: translateY(-5px);
+        }
+    }
+
+    .invitation-text {
+        flex: 1;
+    }
+
+    .invitation-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg, #1db954, #1ed760);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 2px 10px rgba(29, 185, 84, 0.3);
+    }
+
+    .invitation-description {
+        font-size: 1.2rem;
+        color: #e0e0e0;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .invitation-description strong {
+        color: #1db954;
+        font-weight: 700;
+    }
+
+    .invitation-features {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .invitation-features .feature {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #1db954;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .invitation-features .feature i {
+        font-size: 1.2rem;
+    }
+
+    .invitation-cta {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .btn-manage-invitations-spotlight {
+        background: linear-gradient(135deg, #1db954, #1ed760);
+        color: #000 !important;
+        padding: 1rem 2rem;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        transition: all 0.3s ease;
+        box-shadow: 
+            0 8px 25px rgba(29, 185, 84, 0.4),
+            0 0 20px rgba(29, 185, 84, 0.3);
+        position: relative;
+        overflow: hidden;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        min-width: 250px;
+        justify-content: center;
+    }
+
+    .btn-manage-invitations-spotlight::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .btn-manage-invitations-spotlight:hover::before {
+        left: 100%;
+    }
+
+    .btn-manage-invitations-spotlight:hover {
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 
+            0 12px 35px rgba(29, 185, 84, 0.5),
+            0 0 30px rgba(29, 185, 84, 0.4);
+        color: #000 !important;
+    }
+
+    .cta-subtitle {
+        color: #b3b3b3;
+        font-size: 1rem;
+        margin: 0;
+        font-style: italic;
+    }
+
+    /* Modal de cancelación - mantenido igual */
+    .cancel-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        backdrop-filter: blur(8px);
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .cancel-modal-overlay.d-none {
+        display: none !important;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    .cancel-modal-container {
+        background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+        border: 1px solid #444;
+        border-radius: 20px;
+        padding: 0;
+        max-width: 520px;
+        width: 90%;
+        box-shadow: 0 25px 80px rgba(0, 0, 0, 0.7);
+        overflow: hidden;
+        animation: modalSlideIn 0.4s ease-out;
+        position: relative;
+    }
+
+    @@keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .cancel-modal-header {
+        background: linear-gradient(135deg, #ff6b6b, #ff5252);
+        padding: 2rem;
+        text-align: center;
+        color: #fff;
+    }
+
+    .cancel-modal-icon {
+        font-size: 3.5rem;
+        margin-bottom: 1rem;
+        animation: pulse 2s infinite;
+    }
+
+    @@keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    .cancel-modal-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .cancel-modal-body {
+        padding: 2rem;
+    }
+
+    .cancel-modal-message {
+        font-size: 1.2rem;
+        color: #fff;
+        margin-bottom: 2rem;
+        line-height: 1.6;
+        text-align: center;
+    }
+
+    .cancel-modal-warning {
+        background: rgba(255, 193, 7, 0.1);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+        color: #ffc107;
+    }
+
+    .cancel-modal-warning i {
+        font-size: 1.5rem;
+        margin-top: 0.2rem;
+        flex-shrink: 0;
+    }
+
+    .warning-title {
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        font-size: 1.1rem;
+        color: #ffc107;
+    }
+
+    .warning-list {
+        margin: 0;
+        padding-left: 1.5rem;
+        color: #e0e0e0;
+    }
+
+    .warning-list li {
+        margin-bottom: 0.5rem;
+        line-height: 1.4;
+    }
+
+    .cancel-modal-actions {
+        padding: 2rem;
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-modal {
+        padding: 12px 28px;
+        border-radius: 25px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        font-size: 1rem;
+        display: inline-flex;
+        align-items: center;
+        min-width: 180px;
+        justify-content: center;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-keep {
+        background: linear-gradient(135deg, #1db954, #1ed760);
+        color: #000;
+        box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
+    }
+
+    .btn-keep:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(29, 185, 84, 0.4);
+        background: linear-gradient(135deg, #1ed760, #22c55e);
+    }
+
+    .btn-confirm-cancel {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: #fff;
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    }
+
+    .btn-confirm-cancel:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+        background: linear-gradient(135deg, #c82333, #a71e2a);
+    }
+
     /* Responsive */
     @@media (max-width: 768px) {
         .plans-container {
@@ -443,7 +1021,7 @@
             font-size: 2rem;
         }
 
-        .plans-grid {
+        .planes-grid {
             grid-template-columns: 1fr;
             gap: 1.5rem;
         }
@@ -465,6 +1043,22 @@
         .plan-footer {
             padding: 1.5rem;
         }
+
+        .invitation-content {
+            grid-template-columns: 1fr;
+            text-align: center;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .invitation-icon {
+            font-size: 4rem;
+            width: auto;
+        }
+
+        .invitation-title {
+            font-size: 1.8rem;
+        }
     }
 
     /* Ocultar elementos del layout principal */
@@ -481,6 +1075,10 @@
     .fab {
         font-family: "Font Awesome 5 Brands" !important;
         font-weight: 400 !important;
+    }
+
+    .text-success {
+        color: #1db954 !important;
     }
 </style>
 
@@ -526,4 +1124,45 @@
             modal.show();
         }
     });
+
+    // Funciones del modal de cancelación
+    function showCancelModal(planName) {
+        document.getElementById('planToCancel').textContent = planName;
+        document.getElementById('cancelModal').classList.remove('d-none');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function hideCancelModal() {
+        document.getElementById('cancelModal').classList.add('d-none');
+        document.body.style.overflow = 'auto';
+    }
+
+    function confirmCancelSubscription() {
+        const confirmBtn = document.querySelector('.btn-confirm-cancel');
+        const originalContent = confirmBtn.innerHTML;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Cancelando...';
+        confirmBtn.disabled = true;
+        
+        setTimeout(() => {
+            document.getElementById('cancelForm').submit();
+        }, 1000);
+    }
+
+    // Cerrar modal al hacer click fuera o con Escape
+    document.addEventListener('click', function(e) {
+        const modal = document.getElementById('cancelModal');
+        if (e.target === modal) {
+            hideCancelModal();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            hideCancelModal();
+        }
+    });
+
+    function reactivateSubscription() {
+        window.location.href = '@Url.Action("ReactivateSubscription", "Plans")';
+    }
 </script>

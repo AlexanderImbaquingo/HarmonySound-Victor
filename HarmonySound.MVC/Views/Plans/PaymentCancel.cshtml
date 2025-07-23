@@ -1,0 +1,308 @@
+﻿@{
+    ViewData["Title"] = "Pago Cancelado";
+}
+
+<div class="payment-cancel-container">
+    <div class="payment-cancel-card">
+        <div class="cancel-header">
+            <div class="cancel-icon">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <h1 class="cancel-title">Pago Cancelado</h1>
+        </div>
+        
+        <div class="cancel-content">
+            <div class="cancel-message">
+                <h2 class="message-title">No se procesó el pago</h2>
+                <p class="cancel-description">
+                    Has cancelado el proceso de pago. No se ha realizado ningún cargo a tu cuenta.
+                </p>
+                
+                <!-- ✅ NUEVO: Opciones después de cancelar -->
+                <div class="next-steps">
+                    <h3 class="steps-title">¿Qué puedes hacer ahora?</h3>
+                    <div class="options-list">
+                        <div class="option-item">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Volver e intentar el pago nuevamente</span>
+                        </div>
+                        <div class="option-item">
+                            <i class="fas fa-music"></i>
+                            <span>Continuar usando la versión gratuita</span>
+                        </div>
+                        <div class="option-item">
+                            <i class="fas fa-question-circle"></i>
+                            <span>Contactar soporte si tienes dudas</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <a href="@Url.Action("Index", "Plans")" class="btn btn-primary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Volver a Planes
+                    </a>
+                    <a href="@Url.Action("Home", "Clients")" class="btn btn-secondary">
+                        <i class="fas fa-music me-2"></i>
+                        Continuar Gratis
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* CSS Base */
+    body { 
+        background: #000 !important; 
+        color: #fff !important; 
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; 
+        margin: 0; 
+        padding: 0; 
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .payment-cancel-container {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+    }
+
+    .payment-cancel-card {
+        background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+        border: 1px solid #333;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        width: 100%;
+        animation: slideInUp 0.6s ease-out;
+    }
+
+    .cancel-header {
+        background: linear-gradient(135deg, #ff6b6b, #ff5252);
+        text-align: center;
+        padding: 3rem 2rem 2rem;
+    }
+
+    .cancel-icon {
+        font-size: 4rem;
+        color: #fff;
+        margin-bottom: 1rem;
+        animation: bounceIn 0.8s ease-out 0.2s both;
+    }
+
+    .cancel-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #fff;
+        margin: 0;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .cancel-content {
+        padding: 2.5rem;
+    }
+
+    .cancel-message {
+        text-align: center;
+        animation: fadeInUp 0.6s ease-out 0.4s both;
+    }
+
+    .message-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #ff6b6b;
+        margin-bottom: 1rem;
+    }
+
+    .cancel-description {
+        font-size: 1.1rem;
+        color: #b3b3b3;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* ✅ NUEVO: Estilos para próximos pasos */
+    .next-steps {
+        background: rgba(255, 193, 7, 0.1);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 2rem 0;
+        text-align: left;
+    }
+
+    .steps-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #ffc107;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+
+    .options-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .option-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
+        border: 1px solid #333;
+        color: #fff;
+    }
+
+    .option-item i {
+        color: #ffc107;
+        font-size: 1.2rem;
+        width: 24px;
+        text-align: center;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2.5rem;
+        animation: fadeInUp 0.6s ease-out 0.8s both;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border-radius: 25px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+        min-width: 160px;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #1db954, #1ed760);
+        color: #000;
+        box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(29, 185, 84, 0.4);
+        color: #000;
+    }
+
+    .btn-secondary {
+        background: transparent;
+        color: #b3b3b3;
+        border: 1px solid #404040;
+    }
+
+    .btn-secondary:hover {
+        background: #1a1a1a;
+        color: #fff;
+        border-color: #ffc107;
+        transform: translateY(-2px);
+    }
+
+    /* Animaciones */
+    @@keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes bounceIn {
+        0% {
+            transform: scale(0);
+            opacity: 0;
+        }
+        50% {
+            transform: scale(1.1);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .payment-cancel-container {
+            padding: 1rem;
+        }
+
+        .cancel-header {
+            padding: 2rem 1.5rem 1.5rem;
+        }
+
+        .cancel-icon {
+            font-size: 3rem;
+        }
+
+        .cancel-title {
+            font-size: 2rem;
+        }
+
+        .cancel-content {
+            padding: 2rem 1.5rem;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .btn {
+            width: 100%;
+            max-width: 280px;
+        }
+    }
+
+    /* Ocultar elementos del layout */
+    header, footer { display: none !important; }
+    
+    /* FontAwesome */
+    .fas { 
+        font-family: "Font Awesome 5 Free" !important; 
+        font-weight: 900 !important; 
+    }
+</style>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
